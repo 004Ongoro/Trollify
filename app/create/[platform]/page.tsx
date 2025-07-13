@@ -13,20 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Download, Shuffle, Upload, Eye, Palette, User, Clock, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Download, Shuffle, Upload, Eye, Palette, User, Clock } from "lucide-react"
 import html2canvas from "html2canvas"
 import { ThemeToggle } from "@/components/theme-toggle"
-
-interface CommentData {
-  id: string
-  username: string
-  displayName: string
-  text: string
-  likes: number
-  timestamp: string
-  verified: boolean
-  profilePicture: string | null
-}
 
 const templates = {
   twitter: [
@@ -34,23 +23,20 @@ const templates = {
     { id: "image-post", name: "Image Post", type: "image" },
     { id: "text-image-post", name: "Text + Image Post", type: "text-image" },
     { id: "comment-only", name: "Comment Only", type: "comment" },
-    { id: "text-post-comments", name: "Text Post with Comments", type: "text-post-comments" },
-    { id: "image-post-comments", name: "Image Post with Comments", type: "image-post-comments" },
+    { id: "post-with-comments", name: "Post with Comments", type: "post-comments" },
   ],
   facebook: [
     { id: "text-post", name: "Text Post", type: "text" },
     { id: "image-post", name: "Image Post", type: "image" },
     { id: "text-image-post", name: "Text + Image Post", type: "text-image" },
     { id: "comment-only", name: "Comment Only", type: "comment" },
-    { id: "text-post-comments", name: "Text Post with Comments", type: "text-post-comments" },
-    { id: "image-post-comments", name: "Image Post with Comments", type: "image-post-comments" },
+    { id: "post-with-comments", name: "Post with Comments", type: "post-comments" },
   ],
   instagram: [
     { id: "image-post", name: "Image Post", type: "image" },
     { id: "text-image-post", name: "Text + Image Post", type: "text-image" },
     { id: "comment-only", name: "Comment Only", type: "comment" },
-    { id: "text-post-comments", name: "Text Post with Comments", type: "text-post-comments" },
-    { id: "image-post-comments", name: "Image Post with Comments", type: "image-post-comments" },
+    { id: "post-with-comments", name: "Post with Comments", type: "post-comments" },
   ],
 }
 
@@ -61,17 +47,6 @@ const themes = {
 }
 
 const fonts = ["Arial", "Helvetica", "Roboto", "Open Sans", "Montserrat"]
-
-// Utility function to format numbers like social media platforms
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M"
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K"
-  }
-  return num.toString()
-}
 
 export default function CreatePage({ params }: { params: { platform: string } }) {
   const [selectedTemplate, setSelectedTemplate] = useState("")
@@ -89,28 +64,23 @@ export default function CreatePage({ params }: { params: { platform: string } })
     following: "890",
     posts: "156",
   })
-
-  const [comments, setComments] = useState<CommentData[]>([
-    {
-      id: "1",
-      username: "janedoe",
-      displayName: "Jane Doe",
-      text: "Great post! Thanks for sharing this.",
-      likes: 5,
-      timestamp: "1h",
-      verified: false,
-      profilePicture: null,
-    },
-  ])
-
+  const [commentData, setCommentData] = useState({
+    username: "janedoe",
+    displayName: "Jane Doe",
+    text: "Great post! Thanks for sharing this.",
+    likes: 5,
+    timestamp: "1h",
+    verified: false,
+  })
   const [selectedTheme, setSelectedTheme] = useState("Dark")
   const [selectedFont, setSelectedFont] = useState("Arial")
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [commentProfilePicture, setCommentProfilePicture] = useState<string | null>(null)
   const previewRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const profilePicInputRef = useRef<HTMLInputElement>(null)
-  const commentProfilePicInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
+  const commentProfilePicInputRef = useRef<HTMLInputElement>(null)
 
   const platform = params.platform
   const platformTemplates = templates[platform as keyof typeof templates] || []
@@ -125,20 +95,17 @@ export default function CreatePage({ params }: { params: { platform: string } })
   const generateRandomNumbers = () => {
     setPostData((prev) => ({
       ...prev,
-      likes: Math.floor(Math.random() * 50000),
-      comments: Math.floor(Math.random() * 5000),
-      shares: Math.floor(Math.random() * 2500),
-      followers: formatNumber(Math.floor(Math.random() * 100000)),
+      likes: Math.floor(Math.random() * 10000),
+      comments: Math.floor(Math.random() * 1000),
+      shares: Math.floor(Math.random() * 500),
+      followers: `${(Math.random() * 100).toFixed(1)}K`,
       following: Math.floor(Math.random() * 2000).toString(),
       posts: Math.floor(Math.random() * 500).toString(),
     }))
-
-    setComments((prev) =>
-      prev.map((comment) => ({
-        ...comment,
-        likes: Math.floor(Math.random() * 500),
-      })),
-    )
+    setCommentData((prev) => ({
+      ...prev,
+      likes: Math.floor(Math.random() * 100),
+    }))
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,43 +130,15 @@ export default function CreatePage({ params }: { params: { platform: string } })
     }
   }
 
-  const handleCommentProfilePictureUpload = (commentId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCommentProfilePictureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onload = (e) => {
-        setComments((prev) =>
-          prev.map((comment) =>
-            comment.id === commentId ? { ...comment, profilePicture: e.target?.result as string } : comment,
-          ),
-        )
+        setCommentProfilePicture(e.target?.result as string)
       }
       reader.readAsDataURL(file)
     }
-  }
-
-  const addComment = () => {
-    if (comments.length < 5) {
-      const newComment: CommentData = {
-        id: Date.now().toString(),
-        username: `user${comments.length + 1}`,
-        displayName: `User ${comments.length + 1}`,
-        text: "This is a sample comment.",
-        likes: Math.floor(Math.random() * 50),
-        timestamp: "30m",
-        verified: false,
-        profilePicture: null,
-      }
-      setComments((prev) => [...prev, newComment])
-    }
-  }
-
-  const removeComment = (commentId: string) => {
-    setComments((prev) => prev.filter((comment) => comment.id !== commentId))
-  }
-
-  const updateComment = (commentId: string, field: keyof CommentData, value: any) => {
-    setComments((prev) => prev.map((comment) => (comment.id === commentId ? { ...comment, [field]: value } : comment)))
   }
 
   const downloadImage = async () => {
@@ -241,116 +180,114 @@ export default function CreatePage({ params }: { params: { platform: string } })
     )
   }
 
-  const renderComments = () => {
+  const renderComment = () => {
     const isDark = selectedTheme === "Dark"
 
-    return comments.map((comment, index) => {
-      if (platform === "twitter") {
-        return (
-          <div key={comment.id} className={`mt-4 ${index === 0 ? "border-t border-gray-800 pt-4" : ""}`}>
-            <div className="flex items-start space-x-3">
-              {renderProfilePicture(comment.profilePicture, comment.displayName, "w-10 h-10")}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-1 flex-wrap">
-                  <span className="font-bold text-sm">{comment.displayName}</span>
-                  {comment.verified && (
-                    <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-2.5-1.668c-.265-.177-.335-.538-.156-.804.178-.266.538-.336.804-.156l1.921 1.281 3.957-5.936c.178-.267.538-.336.804-.156.267.179.336.538.156.804z" />
-                    </svg>
-                  )}
-                  <span className={`text-xs ${isDark ? "text-gray-500" : "text-gray-600"}`}>
-                    @{comment.username} · {comment.timestamp}
-                  </span>
+    if (platform === "twitter") {
+      return (
+        <div className={`mt-4 border-t ${isDark ? "border-gray-800" : "border-gray-200"} pt-4`}>
+          <div className="flex items-start space-x-3">
+            {renderProfilePicture(commentProfilePicture, commentData.displayName, "w-10 h-10")}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-1 flex-wrap">
+                <span className="font-bold text-sm">{commentData.displayName}</span>
+                {commentData.verified && (
+                  <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-2.5-1.668c-.265-.177-.335-.538-.156-.804.178-.266.538-.336.804-.156l1.921 1.281 3.957-5.936c.178-.267.538-.336.804-.156.267.179.336.538.156.804z" />
+                  </svg>
+                )}
+                <span className={`text-xs ${isDark ? "text-gray-500" : "text-gray-600"}`}>
+                  @{commentData.username} · {commentData.timestamp}
+                </span>
+              </div>
+              <p className="mt-1 text-sm leading-relaxed">{commentData.text}</p>
+              <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                <div className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full px-2 py-1 transition-colors cursor-pointer">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
                 </div>
-                <p className="mt-1 text-sm leading-relaxed">{comment.text}</p>
-                <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                  <div className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full px-2 py-1 transition-colors cursor-pointer">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex items-center space-x-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full px-2 py-1 transition-colors cursor-pointer">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
-                    <span>{formatNumber(comment.likes)}</span>
-                  </div>
+                <div className="flex items-center space-x-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full px-2 py-1 transition-colors cursor-pointer">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                  <span>{commentData.likes}</span>
                 </div>
               </div>
             </div>
           </div>
-        )
-      }
+        </div>
+      )
+    }
 
-      if (platform === "facebook") {
-        return (
-          <div key={comment.id} className={`mt-4 ${index === 0 ? "border-t border-gray-700 pt-4" : ""}`}>
-            <div className="flex items-start space-x-3">
-              {renderProfilePicture(comment.profilePicture, comment.displayName, "w-8 h-8")}
-              <div className={`flex-1 ${isDark ? "bg-gray-700" : "bg-gray-100"} rounded-2xl px-3 py-2`}>
-                <div className="flex items-center space-x-1 mb-1">
-                  <span className="font-semibold text-sm">{comment.displayName}</span>
-                  {comment.verified && (
-                    <svg className="w-3 h-3 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.68 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-10 5l-4-4 1.41-1.41L13 14.17l6.59-6.59L21 9l-8 8z" />
-                    </svg>
-                  )}
-                </div>
-                <p className="text-sm">{comment.text}</p>
+    if (platform === "facebook") {
+      return (
+        <div className={`mt-4 border-t ${isDark ? "border-gray-700" : "border-gray-200"} pt-4`}>
+          <div className="flex items-start space-x-3">
+            {renderProfilePicture(commentProfilePicture, commentData.displayName, "w-8 h-8")}
+            <div className={`flex-1 ${isDark ? "bg-gray-700" : "bg-gray-100"} rounded-2xl px-3 py-2`}>
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="font-semibold text-sm">{commentData.displayName}</span>
+                {commentData.verified && (
+                  <svg className="w-3 h-3 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.68 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-10 5l-4-4 1.41-1.41L13 14.17l6.59-6.59L21 9l-8 8z" />
+                  </svg>
+                )}
               </div>
-            </div>
-            <div className="flex items-center space-x-4 mt-2 ml-11 text-xs text-gray-500">
-              <span className="hover:underline cursor-pointer">Like</span>
-              <span className="hover:underline cursor-pointer">Reply</span>
-              <span>{comment.timestamp}</span>
-              {comment.likes > 0 && (
-                <div className="flex items-center space-x-1">
-                  <span>👍</span>
-                  <span>{formatNumber(comment.likes)}</span>
-                </div>
-              )}
+              <p className="text-sm">{commentData.text}</p>
             </div>
           </div>
-        )
-      }
-
-      if (platform === "instagram") {
-        return (
-          <div key={comment.id} className={`mt-3 ${index === 0 ? "border-t border-gray-200 pt-3" : ""}`}>
-            <div className="flex items-start space-x-3">
-              {renderProfilePicture(comment.profilePicture, comment.displayName, "w-8 h-8")}
-              <div className="flex-1">
-                <div className="text-sm">
-                  <span className="font-semibold">{comment.username}</span>
-                  {comment.verified && (
-                    <svg className="w-3 h-3 text-blue-500 inline ml-1" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.68 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-10 5l-4-4 1.41-1.41L13 14.17l6.59-6.59L21 9l-8 8z" />
-                    </svg>
-                  )}
-                  <span className="ml-2">{comment.text}</span>
-                </div>
-                <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                  <span>{comment.timestamp}</span>
-                  {comment.likes > 0 && <span>{formatNumber(comment.likes)} likes</span>}
-                  <span className="hover:text-gray-700 cursor-pointer">Reply</span>
-                </div>
+          <div className="flex items-center space-x-4 mt-2 ml-11 text-xs text-gray-500">
+            <span className="hover:underline cursor-pointer">Like</span>
+            <span className="hover:underline cursor-pointer">Reply</span>
+            <span>{commentData.timestamp}</span>
+            {commentData.likes > 0 && (
+              <div className="flex items-center space-x-1">
+                <span>👍</span>
+                <span>{commentData.likes}</span>
               </div>
-              <svg
-                className="w-3 h-3 text-gray-400 hover:text-red-500 cursor-pointer"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-            </div>
+            )}
           </div>
-        )
-      }
+        </div>
+      )
+    }
 
-      return null
-    })
+    if (platform === "instagram") {
+      return (
+        <div className="mt-4 border-t border-gray-200 pt-4">
+          <div className="flex items-start space-x-3">
+            {renderProfilePicture(commentProfilePicture, commentData.displayName, "w-8 h-8")}
+            <div className="flex-1">
+              <div className="text-sm">
+                <span className="font-semibold">{commentData.username}</span>
+                {commentData.verified && (
+                  <svg className="w-3 h-3 text-blue-500 inline ml-1" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.68 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-10 5l-4-4 1.41-1.41L13 14.17l6.59-6.59L21 9l-8 8z" />
+                  </svg>
+                )}
+                <span className="ml-2">{commentData.text}</span>
+              </div>
+              <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                <span>{commentData.timestamp}</span>
+                {commentData.likes > 0 && <span>{commentData.likes} likes</span>}
+                <span className="hover:text-gray-700 cursor-pointer">Reply</span>
+              </div>
+            </div>
+            <svg
+              className="w-3 h-3 text-gray-400 hover:text-red-500 cursor-pointer"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </div>
+        </div>
+      )
+    }
+
+    return null
   }
 
   const renderPreview = () => {
@@ -364,7 +301,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
           className={`max-w-md mx-auto ${isDark ? "bg-black text-white" : "bg-white text-black"} rounded-2xl border ${isDark ? "border-gray-800" : "border-gray-200"} p-4 font-sans`}
           style={{ fontFamily: selectedFont }}
         >
-          {renderComments()}
+          {renderComment()}
         </div>
       )
     }
@@ -389,19 +326,14 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   @{postData.username} · {postData.timestamp}
                 </span>
               </div>
-              {(currentTemplate?.type === "text" ||
-                currentTemplate?.type === "text-image" ||
-                currentTemplate?.type === "text-post-comments") && (
+              {(currentTemplate?.type === "text" || currentTemplate?.type === "text-image") && (
                 <p className="mt-3 text-base leading-relaxed whitespace-pre-wrap">{postData.postText}</p>
               )}
-              {(currentTemplate?.type === "image" ||
-                currentTemplate?.type === "text-image" ||
-                currentTemplate?.type === "image-post-comments") &&
-                uploadedImage && (
-                  <div className="mt-3 rounded-2xl overflow-hidden border border-gray-200">
-                    <img src={uploadedImage || "/placeholder.svg"} alt="Post" className="w-full h-auto" />
-                  </div>
-                )}
+              {(currentTemplate?.type === "image" || currentTemplate?.type === "text-image") && uploadedImage && (
+                <div className="mt-3 rounded-2xl overflow-hidden border border-gray-200">
+                  <img src={uploadedImage || "/placeholder.svg"} alt="Post" className="w-full h-auto" />
+                </div>
+              )}
               <div
                 className={`flex items-center justify-between mt-4 max-w-md ${isDark ? "text-gray-500" : "text-gray-600"} text-sm`}
               >
@@ -409,7 +341,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
-                  <span>{formatNumber(postData.comments)}</span>
+                  <span>{postData.comments}</span>
                 </div>
                 <div className="flex items-center space-x-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full px-3 py-1 transition-colors cursor-pointer">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -418,13 +350,13 @@ export default function CreatePage({ params }: { params: { platform: string } })
                     <path d="M7 23l-4-4 4-4" />
                     <path d="M21 13v2a4 4 0 0 1-4 4H3" />
                   </svg>
-                  <span>{formatNumber(postData.shares)}</span>
+                  <span>{postData.shares}</span>
                 </div>
                 <div className="flex items-center space-x-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full px-3 py-1 transition-colors cursor-pointer">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                   </svg>
-                  <span>{formatNumber(postData.likes)}</span>
+                  <span>{postData.likes}</span>
                 </div>
                 <div className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full px-3 py-1 transition-colors cursor-pointer">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -432,8 +364,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   </svg>
                 </div>
               </div>
-              {(currentTemplate?.type === "text-post-comments" || currentTemplate?.type === "image-post-comments") &&
-                renderComments()}
+              {currentTemplate?.type === "post-comments" && renderComment()}
             </div>
           </div>
         </div>
@@ -463,20 +394,15 @@ export default function CreatePage({ params }: { params: { platform: string } })
                 </span>
               </div>
             </div>
-            {(currentTemplate?.type === "text" ||
-              currentTemplate?.type === "text-image" ||
-              currentTemplate?.type === "text-post-comments") && (
+            {(currentTemplate?.type === "text" || currentTemplate?.type === "text-image") && (
               <p className="mb-3 text-base leading-relaxed">{postData.postText}</p>
             )}
           </div>
-          {(currentTemplate?.type === "image" ||
-            currentTemplate?.type === "text-image" ||
-            currentTemplate?.type === "image-post-comments") &&
-            uploadedImage && (
-              <div className="w-full">
-                <img src={uploadedImage || "/placeholder.svg"} alt="Post" className="w-full h-auto" />
-              </div>
-            )}
+          {(currentTemplate?.type === "image" || currentTemplate?.type === "text-image") && uploadedImage && (
+            <div className="w-full">
+              <img src={uploadedImage || "/placeholder.svg"} alt="Post" className="w-full h-auto" />
+            </div>
+          )}
           <div className={`px-4 py-2 border-t ${isDark ? "border-gray-700" : "border-gray-200"}`}>
             <div
               className={`flex items-center justify-between text-sm ${isDark ? "text-gray-400" : "text-gray-600"} mb-3`}
@@ -494,11 +420,11 @@ export default function CreatePage({ params }: { params: { platform: string } })
                     </svg>
                   </div>
                 </div>
-                <span>{formatNumber(postData.likes)}</span>
+                <span>{postData.likes}</span>
               </div>
               <div className="flex items-center space-x-4">
-                <span>{formatNumber(postData.comments)} comments</span>
-                <span>{formatNumber(postData.shares)} shares</span>
+                <span>{postData.comments} comments</span>
+                <span>{postData.shares} shares</span>
               </div>
             </div>
             <div
@@ -535,8 +461,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
                 <span>Share</span>
               </button>
             </div>
-            {(currentTemplate?.type === "text-post-comments" || currentTemplate?.type === "image-post-comments") &&
-              renderComments()}
+            {currentTemplate?.type === "post-comments" && renderComment()}
           </div>
         </div>
       )
@@ -628,8 +553,8 @@ export default function CreatePage({ params }: { params: { platform: string } })
                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z" />
               </svg>
             </div>
-            <div className="text-sm font-semibold mb-1">{formatNumber(postData.likes)} likes</div>
-            {(currentTemplate?.type === "text-image" || currentTemplate?.type === "text-post-comments") && (
+            <div className="text-sm font-semibold mb-1">{postData.likes.toLocaleString()} likes</div>
+            {currentTemplate?.type === "text-image" && (
               <div className="text-sm mb-2">
                 <span className="font-semibold">{postData.username}</span> {postData.postText}
               </div>
@@ -637,8 +562,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
             <div className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"} uppercase tracking-wide`}>
               {postData.timestamp} ago
             </div>
-            {(currentTemplate?.type === "text-post-comments" || currentTemplate?.type === "image-post-comments") &&
-              renderComments()}
+            {currentTemplate?.type === "post-comments" && renderComment()}
           </div>
         </div>
       )
@@ -646,11 +570,6 @@ export default function CreatePage({ params }: { params: { platform: string } })
 
     return null
   }
-
-  const hasCommentFeatures =
-    selectedTemplate === "comment-only" ||
-    selectedTemplate === "text-post-comments" ||
-    selectedTemplate === "image-post-comments"
 
   return (
     <div className="min-h-screen bg-[#1A1A2E] text-white">
@@ -779,9 +698,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   />
                 </div>
 
-                {(selectedTemplate === "text-post" ||
-                  selectedTemplate === "text-image-post" ||
-                  selectedTemplate === "text-post-comments") && (
+                {(selectedTemplate === "text-post" || selectedTemplate === "text-image-post") && (
                   <div>
                     <Label htmlFor="postText">Post Text</Label>
                     <Textarea
@@ -794,9 +711,7 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   </div>
                 )}
 
-                {(selectedTemplate === "image-post" ||
-                  selectedTemplate === "text-image-post" ||
-                  selectedTemplate === "image-post-comments") && (
+                {(selectedTemplate === "image-post" || selectedTemplate === "text-image-post") && (
                   <div>
                     <Label>Post Image</Label>
                     <div className="flex items-center space-x-2">
@@ -820,127 +735,88 @@ export default function CreatePage({ params }: { params: { platform: string } })
                   </div>
                 )}
 
-                {/* Comments Section */}
-                {hasCommentFeatures && (
+                {/* Comment Section for comment templates */}
+                {(selectedTemplate === "comment-only" || selectedTemplate === "post-with-comments") && (
                   <>
                     <Separator className="bg-gray-700" />
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <Label className="text-[#A100F2] font-semibold text-lg">Comments ({comments.length}/5)</Label>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={addComment}
-                          disabled={comments.length >= 5}
-                          className="border-gray-600 bg-transparent"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Comment
-                        </Button>
+                      <Label className="text-[#A100F2] font-semibold">Comment Settings</Label>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label htmlFor="commentUsername">Comment Username</Label>
+                          <Input
+                            id="commentUsername"
+                            value={commentData.username}
+                            onChange={(e) => setCommentData((prev) => ({ ...prev, username: e.target.value }))}
+                            className="bg-gray-800 border-gray-600"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="commentDisplayName">Comment Display Name</Label>
+                          <Input
+                            id="commentDisplayName"
+                            value={commentData.displayName}
+                            onChange={(e) => setCommentData((prev) => ({ ...prev, displayName: e.target.value }))}
+                            className="bg-gray-800 border-gray-600"
+                          />
+                        </div>
                       </div>
-
-                      <div className="space-y-6">
-                        {comments.map((comment, index) => (
-                          <Card key={comment.id} className="bg-gray-800/50 border-gray-600">
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm text-[#A100F2]">Comment {index + 1}</CardTitle>
-                                {comments.length > 1 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeComment(comment.id)}
-                                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label htmlFor={`comment-username-${comment.id}`}>Username</Label>
-                                  <Input
-                                    id={`comment-username-${comment.id}`}
-                                    value={comment.username}
-                                    onChange={(e) => updateComment(comment.id, "username", e.target.value)}
-                                    className="bg-gray-800 border-gray-600"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor={`comment-displayName-${comment.id}`}>Display Name</Label>
-                                  <Input
-                                    id={`comment-displayName-${comment.id}`}
-                                    value={comment.displayName}
-                                    onChange={(e) => updateComment(comment.id, "displayName", e.target.value)}
-                                    className="bg-gray-800 border-gray-600"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label htmlFor={`comment-text-${comment.id}`}>Comment Text</Label>
-                                <Textarea
-                                  id={`comment-text-${comment.id}`}
-                                  value={comment.text}
-                                  onChange={(e) => updateComment(comment.id, "text", e.target.value)}
-                                  className="bg-gray-800 border-gray-600"
-                                  rows={2}
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label htmlFor={`comment-timestamp-${comment.id}`}>Timestamp</Label>
-                                  <Input
-                                    id={`comment-timestamp-${comment.id}`}
-                                    value={comment.timestamp}
-                                    onChange={(e) => updateComment(comment.id, "timestamp", e.target.value)}
-                                    className="bg-gray-800 border-gray-600"
-                                    placeholder="e.g., 1h, 30m"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor={`comment-likes-${comment.id}`}>Likes</Label>
-                                  <Input
-                                    id={`comment-likes-${comment.id}`}
-                                    type="number"
-                                    value={comment.likes}
-                                    onChange={(e) =>
-                                      updateComment(comment.id, "likes", Number.parseInt(e.target.value) || 0)
-                                    }
-                                    className="bg-gray-800 border-gray-600"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <Label>Profile Picture</Label>
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => commentProfilePicInputRefs.current[comment.id]?.click()}
-                                    className="border-gray-600"
-                                  >
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Upload Picture
-                                  </Button>
-                                  {comment.profilePicture && (
-                                    <span className="text-sm text-green-400">Picture uploaded</span>
-                                  )}
-                                </div>
-                                <input
-                                  ref={(el) => (commentProfilePicInputRefs.current[comment.id] = el)}
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleCommentProfilePictureUpload(comment.id, e)}
-                                  className="hidden"
-                                />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                      <div className="mt-4">
+                        <Label htmlFor="commentText">Comment Text</Label>
+                        <Textarea
+                          id="commentText"
+                          value={commentData.text}
+                          onChange={(e) => setCommentData((prev) => ({ ...prev, text: e.target.value }))}
+                          className="bg-gray-800 border-gray-600"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <Label htmlFor="commentTimestamp">Comment Timestamp</Label>
+                          <Input
+                            id="commentTimestamp"
+                            value={commentData.timestamp}
+                            onChange={(e) => setCommentData((prev) => ({ ...prev, timestamp: e.target.value }))}
+                            className="bg-gray-800 border-gray-600"
+                            placeholder="e.g., 1h, 30m"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="commentLikes">Comment Likes</Label>
+                          <Input
+                            id="commentLikes"
+                            type="number"
+                            value={commentData.likes}
+                            onChange={(e) =>
+                              setCommentData((prev) => ({ ...prev, likes: Number.parseInt(e.target.value) || 0 }))
+                            }
+                            className="bg-gray-800 border-gray-600"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Label>Comment Profile Picture</Label>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => commentProfilePicInputRef.current?.click()}
+                            className="border-gray-600"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Comment Profile Picture
+                          </Button>
+                          {commentProfilePicture && (
+                            <span className="text-sm text-green-400">Comment profile picture uploaded</span>
+                          )}
+                        </div>
+                        <input
+                          ref={commentProfilePicInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCommentProfilePictureUpload}
+                          className="hidden"
+                        />
                       </div>
                     </div>
                   </>
