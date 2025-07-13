@@ -14,15 +14,6 @@ export const metadata: Metadata = {
     "fake social media, mock posts, social media generator, testing tools, entertainment, X Twitter, Facebook, Instagram",
   authors: [{ name: "Neontek" }],
   robots: "index, follow",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
-      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    other: [{ rel: "manifest", url: "/site.webmanifest" }],
-  },
   openGraph: {
     title: "Trollify - Create Fake Social Media Posts",
     description:
