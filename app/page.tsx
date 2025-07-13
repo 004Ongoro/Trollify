@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 import Link from "next/link"
 import { Twitter, Facebook, Instagram, Sparkles, Download, Eye } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { PolicyModal } from "@/components/policy-modal"
 
 const platforms = [
   {
@@ -34,9 +36,24 @@ const platforms = [
 
 export default function HomePage() {
   const [selectedPlatform, setSelectedPlatform] = useState("")
+  const [showPolicyModal, setShowPolicyModal] = useState(false)
+
+  useEffect(() => {
+    // Check if user has already accepted policies
+    const policiesAccepted = localStorage.getItem("trollify-policies-accepted")
+    if (!policiesAccepted) {
+      setShowPolicyModal(true)
+    }
+  }, [])
+
+  const handlePolicyAccept = () => {
+    setShowPolicyModal(false)
+  }
 
   return (
     <div className="min-h-screen bg-[#1A1A2E] text-white">
+      <PolicyModal isOpen={showPolicyModal} onAccept={handlePolicyAccept} />
+
       {/* Header */}
       <header className="border-b border-gray-800 bg-[#1A1A2E]/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -44,15 +61,16 @@ export default function HomePage() {
             <Image src="/logo.png" alt="Trollify" width={120} height={40} className="h-10 w-auto" />
           </div>
           <nav className="hidden md:flex items-center space-x-6">
-            <Link href="#features" className="text-gray-300 hover:text-[#00DDEB] transition-colors">
+            <Link href="#features" className="text-gray-200 hover:text-[#00DDEB] transition-colors font-medium">
               Features
             </Link>
-            <Link href="/terms" className="text-gray-300 hover:text-[#00DDEB] transition-colors">
+            <Link href="/terms" className="text-gray-200 hover:text-[#00DDEB] transition-colors font-medium">
               Terms
             </Link>
-            <Link href="/privacy" className="text-gray-300 hover:text-[#00DDEB] transition-colors">
+            <Link href="/privacy" className="text-gray-200 hover:text-[#00DDEB] transition-colors font-medium">
               Privacy
             </Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
@@ -187,7 +205,7 @@ export default function HomePage() {
               Privacy Policy
             </Link>
           </div>
-          <p className="text-gray-500">© 2024 Neontek. All rights reserved. For entertainment purposes only.</p>
+          <p className="text-gray-500">© 2025 Neontek. All rights reserved. For entertainment purposes only.</p>
         </div>
       </footer>
     </div>

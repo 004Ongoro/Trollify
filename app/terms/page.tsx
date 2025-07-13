@@ -128,6 +128,7 @@ export default function TermsPage() {
                 </p>
               </div>
             </div>
+            <p className="text-gray-500">© 2025 Neontek. All rights reserved. For entertainment purposes only.</p>
           </CardContent>
         </Card>
       </div>

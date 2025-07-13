@@ -32,11 +32,11 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 26 16% 18%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 26 16% 18%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 26 16% 18%;
     --popover-foreground: 210 40% 98%;
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -74,7 +74,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a2e;
+  background: hsl(var(--background));
 }
 
 ::-webkit-scrollbar-thumb {
@@ -105,10 +105,57 @@
   background: linear-gradient(135deg, #00ddeb 0%, #a100f2 100%);
 }
 
+/* Improved contrast for better accessibility */
+.high-contrast {
+  filter: contrast(1.2);
+}
+
+/* Platform-specific themes */
+.theme-twitter {
+  --primary: 29 155 240;
+  --primary-foreground: 255 255 255;
+}
+
+.theme-facebook {
+  --primary: 24 119 242;
+  --primary-foreground: 255 255 255;
+}
+
+.theme-instagram {
+  --primary: 225 48 108;
+  --primary-foreground: 255 255 255;
+}
+
 /* Mobile responsiveness improvements */
 @media (max-width: 768px) {
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .text-responsive {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  }
+}
+
+/* Focus improvements for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #00ddeb;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --foreground: 0 0% 0%;
+    --background: 0 0% 100%;
+  }
+
+  .dark {
+    --foreground: 0 0% 100%;
+    --background: 0 0% 0%;
   }
 }

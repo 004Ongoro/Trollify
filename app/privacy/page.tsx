@@ -147,6 +147,7 @@ export default function PrivacyPage() {
                   compromising your personal information or privacy.
                 </p>
               </div>
+              <p className="text-gray-500">© 2025 Neontek. All rights reserved. For entertainment purposes only.</p>
             </div>
           </CardContent>
         </Card>
